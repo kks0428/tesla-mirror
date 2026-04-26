@@ -11,6 +11,11 @@ Tesla 브라우저가 Android Sender App의 화면 스트림을 폰 핫스팟 �
 - Control path: WebRTC DataChannel
 
 ## 미디어 전략
+### Android WebRTC package strategy
+- `org.webrtc:google-webrtc`는 최신 시점에 해상도/배포 안정성이 애매할 수 있음
+- 실제 구현 단계에서는 x86_64 빌드 환경에서 resolve 가능한 유지형 Android WebRTC 배포를 선택해야 함
+- 현재 코드는 WebRTC vendor를 교체 가능하도록 skeleton 수준에서 추상화 유지
+
 ### Video
 - Codec: H.264 우선
 - Source: MediaProjection -> Surface -> MediaCodec

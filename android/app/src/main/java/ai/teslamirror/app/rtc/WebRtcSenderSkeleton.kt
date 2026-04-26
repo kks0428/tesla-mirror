@@ -1,21 +1,24 @@
 package ai.teslamirror.app.rtc
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 
-class WebRtcSenderSkeleton {
+class WebRtcSenderSkeleton(
+    private val webRtcStack: WebRtcStack = PlaceholderWebRtcStack(),
+) {
     private var activeSessionId: String? = null
     private var localOfferSdp: String? = null
     private var remoteAnswerSdp: String? = null
     private val remoteCandidates = mutableListOf<JsonElement>()
+    private val json = Json
 
     fun startSession(sessionId: String) {
         activeSessionId = sessionId
         localOfferSdp = null
         remoteAnswerSdp = null
         remoteCandidates.clear()
-        // TODO: create PeerConnectionFactory
-        // TODO: wire MediaProjection pipeline into video source
-        // TODO: create data channel for control and stats
+        webRtcStack.initialize()
     }
 
     fun ensureLocalOffer(sessionId: String): String {
@@ -23,7 +26,7 @@ class WebRtcSenderSkeleton {
             startSession(sessionId)
         }
         if (localOfferSdp == null) {
-            localOfferSdp = buildFakeOffer(sessionId)
+            localOfferSdp = webRtcStack.createOffer(sessionId)
         }
         return localOfferSdp!!
     }
@@ -31,11 +34,13 @@ class WebRtcSenderSkeleton {
     fun acceptRemoteAnswer(sessionId: String?, sdp: String?) {
         if (sessionId == null || sessionId != activeSessionId) return
         remoteAnswerSdp = sdp
+        webRtcStack.applyAnswer(sessionId, sdp)
     }
 
     fun acceptRemoteIceCandidate(sessionId: String?, candidate: JsonElement?) {
         if (sessionId == null || sessionId != activeSessionId || candidate == null) return
         remoteCandidates += candidate
+        webRtcStack.addIceCandidate(sessionId, json.encodeToString(candidate))
     }
 
     fun stopSession() {
@@ -43,7 +48,7 @@ class WebRtcSenderSkeleton {
         localOfferSdp = null
         remoteAnswerSdp = null
         remoteCandidates.clear()
-        // TODO: dispose peer connection and tracks
+        webRtcStack.dispose()
     }
 
     fun getState(): String {
@@ -53,9 +58,5 @@ class WebRtcSenderSkeleton {
             remoteAnswerSdp == null -> "offer_sent"
             else -> "answer_received"
         }
-    }
-
-    private fun buildFakeOffer(sessionId: String): String {
-        return "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=TeslaMirror-$sessionId\r\nt=0 0\r\na=group:BUNDLE 0\r\na=msid-semantic: WMS\r\n"
     }
 }

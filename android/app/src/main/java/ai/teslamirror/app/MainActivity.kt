@@ -26,8 +26,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val server = LocalServerSkeleton(this)
         val rtc = WebRtcSenderSkeleton()
+        val signalingBridge = ai.teslamirror.app.rtc.SignalingBridge(rtc)
+        val server = LocalServerSkeleton(this, signalingBridge)
         val mediaProjectionController = MediaProjectionController(
             getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         )
