@@ -5,6 +5,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,10 +28,14 @@ class MainActivity : ComponentActivity() {
 
         val server = LocalServerSkeleton(this)
         val rtc = WebRtcSenderSkeleton()
-        val coordinator = MirrorSessionCoordinator(server, rtc)
         val mediaProjectionController = MediaProjectionController(
             getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         )
+        val coordinator = MirrorSessionCoordinator(server, rtc, mediaProjectionController)
+
+        val projectionLauncher = registerForActivityResult(StartActivityForResult()) { result ->
+            coordinator.onProjectionPermissionResult(result.resultCode, result.data)
+        }
 
         setContent {
             val uiState by coordinator.uiState.collectAsState()
@@ -60,8 +65,8 @@ class MainActivity : ComponentActivity() {
                     }
                     Button(onClick = {
                         val intent = mediaProjectionController.createCaptureIntent()
-                        startActivity(intent)
-                        coordinator.updateProjectionState("intent_launched")
+                        projectionLauncher.launch(intent)
+                        coordinator.updateProjectionState("requesting")
                     }) {
                         Text("Request Screen Capture")
                     }

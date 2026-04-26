@@ -8,7 +8,7 @@
 - WebRTC sender placeholder exists
 
 ## Next engineering steps
-1. Replace `startActivity(intent)` with Activity Result API for MediaProjection permission flow
+1. MediaProjection permission flow moved to Activity Result API
 2. Introduce a real embedded HTTP/WebSocket server lifecycle tied to foreground service
 3. Add real WebRTC library integration on Android
 4. Connect signaling messages to the WebRTC sender

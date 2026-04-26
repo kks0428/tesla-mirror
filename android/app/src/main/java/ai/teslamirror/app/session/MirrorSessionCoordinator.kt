@@ -1,5 +1,8 @@
 package ai.teslamirror.app.session
 
+import android.content.Intent
+import android.media.projection.MediaProjection
+import ai.teslamirror.app.capture.MediaProjectionController
 import ai.teslamirror.app.local.LocalServerSkeleton
 import ai.teslamirror.app.model.MirrorUiState
 import ai.teslamirror.app.net.LocalIpResolver
@@ -11,9 +14,11 @@ import kotlinx.coroutines.flow.asStateFlow
 class MirrorSessionCoordinator(
     private val server: LocalServerSkeleton,
     private val rtc: WebRtcSenderSkeleton,
+    private val projectionController: MediaProjectionController,
 ) {
     private val _uiState = MutableStateFlow(MirrorUiState(localIp = LocalIpResolver.guessHotspotIp()))
     val uiState: StateFlow<MirrorUiState> = _uiState.asStateFlow()
+    private var mediaProjection: MediaProjection? = null
 
     fun startLocalSession() {
         server.start()
@@ -45,4 +50,14 @@ class MirrorSessionCoordinator(
     fun updateProjectionState(value: String) {
         _uiState.value = _uiState.value.copy(projectionState = value)
     }
+
+    fun onProjectionPermissionResult(resultCode: Int, data: Intent?) {
+        val projection = projectionController.acquireProjection(resultCode, data)
+        mediaProjection = projection
+        _uiState.value = _uiState.value.copy(
+            projectionState = if (projection != null) "granted" else "denied"
+        )
+    }
+
+    fun hasProjection(): Boolean = mediaProjection != null
 }
