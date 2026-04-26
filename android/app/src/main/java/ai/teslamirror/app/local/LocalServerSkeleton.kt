@@ -14,6 +14,7 @@ import io.ktor.server.routing.routing
 import io.ktor.websocket.Frame
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
+import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -50,7 +51,7 @@ class LocalServerSkeleton(
                     sendSerialized(SignalMessage(type = "session.state", value = "socket_connected"))
                     incoming.consumeEach { frame ->
                         if (frame is Frame.Text) {
-                            val text = (frame as Frame.Text).readText()
+                            val text = String(frame.data, StandardCharsets.UTF_8)
                             val msg = runCatching { json.decodeFromString<SignalMessage>(text) }.getOrNull()
                             if (msg == null) {
                                 sendSerialized(SignalMessage(type = "error", code = "invalid_json", message = "Could not parse message"))
