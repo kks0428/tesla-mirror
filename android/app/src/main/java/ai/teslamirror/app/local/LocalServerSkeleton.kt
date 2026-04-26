@@ -1,14 +1,12 @@
 package ai.teslamirror.app.local
 
 import android.content.Context
+import ai.teslamirror.app.rtc.SignalingBridge
 import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
-import io.ktor.server.http.content.respondTextWriter
-import io.ktor.server.request.receiveText
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
@@ -16,11 +14,12 @@ import io.ktor.server.websocket.Frame
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
 import kotlinx.coroutines.channels.consumeEach
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class LocalServerSkeleton(
     private val context: Context,
+    private val signalingBridge: SignalingBridge,
     val port: Int = 8080,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -62,13 +61,19 @@ class LocalServerSkeleton(
                                         sendSerialized(SignalMessage(type = "error", sessionId = msg.sessionId, code = "invalid_token", message = "Session token mismatch"))
                                     } else {
                                         sendSerialized(SignalMessage(type = "session.state", sessionId = msg.sessionId, value = "joined"))
+                                        if (msg.sessionId != null) {
+                                            sendSerialized(signalingBridge.createOfferMessage(msg.sessionId).toSignalMessage())
+                                            signalingBridge.statsSnapshot(msg.sessionId).forEach { snapshot ->
+                                                sendSerialized(snapshot.toSignalMessage())
+                                            }
+                                        }
                                     }
                                 }
                                 "session.answer" -> {
-                                    sendSerialized(SignalMessage(type = "session.state", sessionId = msg.sessionId, value = "answer_received_placeholder"))
+                                    sendSerialized(signalingBridge.onAnswer(msg.sessionId, msg.sdp).toSignalMessage())
                                 }
                                 "session.ice-candidate" -> {
-                                    sendSerialized(SignalMessage(type = "session.state", sessionId = msg.sessionId, value = "ice_received_placeholder"))
+                                    sendSerialized(signalingBridge.onIceCandidate(msg.sessionId, msg.candidate).toSignalMessage())
                                 }
                                 else -> {
                                     sendSerialized(SignalMessage(type = "session.state", sessionId = msg.sessionId, value = "received:${msg.type}"))

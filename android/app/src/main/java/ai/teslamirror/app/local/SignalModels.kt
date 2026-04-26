@@ -1,5 +1,6 @@
 package ai.teslamirror.app.local
 
+import ai.teslamirror.app.rtc.BridgeMessage
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
@@ -14,3 +15,15 @@ data class SignalMessage(
     val code: String? = null,
     val message: String? = null,
 )
+
+fun BridgeMessage.toSignalMessage(): SignalMessage {
+    return SignalMessage(
+        type = type,
+        sessionId = sessionId,
+        sdp = sdp,
+        candidate = candidate,
+        value = value,
+        code = code,
+        message = message,
+    )
+}
