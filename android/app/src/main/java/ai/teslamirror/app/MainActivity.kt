@@ -1,5 +1,7 @@
 package ai.teslamirror.app
 
+import android.content.Context
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,50 +12,58 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ai.teslamirror.app.capture.MediaProjectionController
 import ai.teslamirror.app.local.LocalServerSkeleton
-import ai.teslamirror.app.net.LocalIpResolver
+import ai.teslamirror.app.rtc.WebRtcSenderSkeleton
+import ai.teslamirror.app.session.MirrorSessionCoordinator
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         val server = LocalServerSkeleton(this)
+        val rtc = WebRtcSenderSkeleton()
+        val coordinator = MirrorSessionCoordinator(server, rtc)
+        val mediaProjectionController = MediaProjectionController(
+            getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        )
 
         setContent {
-            val status = remember { mutableStateOf("idle") }
-            val url = remember { mutableStateOf("http://${LocalIpResolver.guessHotspotIp()}:8080") }
-            val token = remember { mutableStateOf("-") }
-            val sessionId = remember { mutableStateOf("-") }
+            val uiState by coordinator.uiState.collectAsState()
             MaterialTheme {
                 Column(
                     modifier = Modifier.fillMaxSize().padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text("Tesla Mirror")
-                    Text("Status: ${status.value}")
+                    Text("Status: ${uiState.status}")
                     Text("Mode: hotspot local WebRTC")
-                    Text("URL: ${url.value}")
-                    Text("Session: ${sessionId.value}")
-                    Text("Token: ${token.value}")
+                    Text("Projection: ${uiState.projectionState}")
+                    Text("RTC: ${uiState.rtcState}")
+                    Text("IP: ${uiState.localIp}")
+                    Text("URL: ${uiState.url.ifBlank { "http://${uiState.localIp}:8080" }}")
+                    Text("Session: ${uiState.sessionId}")
+                    Text("Token: ${uiState.token}")
                     Button(onClick = {
-                        server.start()
-                        val session = server.createSession()
-                        sessionId.value = session.sessionId
-                        token.value = session.token
-                        val ip = LocalIpResolver.guessHotspotIp()
-                        url.value = "http://${ip}:8080/?sessionId=${session.sessionId}&token=${session.token}"
-                        status.value = "local server started"
+                        coordinator.startLocalSession()
                     }) {
                         Text("Start Mirror")
                     }
                     Button(onClick = {
-                        server.stop()
-                        status.value = "local server stopped"
+                        coordinator.stopLocalSession()
                     }) {
                         Text("Stop Mirror")
+                    }
+                    Button(onClick = {
+                        val intent = mediaProjectionController.createCaptureIntent()
+                        startActivity(intent)
+                        coordinator.updateProjectionState("intent_launched")
+                    }) {
+                        Text("Request Screen Capture")
                     }
                 }
             }
