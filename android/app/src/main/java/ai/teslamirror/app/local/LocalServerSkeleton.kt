@@ -50,7 +50,7 @@ class LocalServerSkeleton(
                     sendSerialized(SignalMessage(type = "session.state", value = "socket_connected"))
                     incoming.consumeEach { frame ->
                         if (frame is Frame.Text) {
-                            val text = frame.text
+                            val text = (frame as Frame.Text).readText()
                             val msg = runCatching { json.decodeFromString<SignalMessage>(text) }.getOrNull()
                             if (msg == null) {
                                 sendSerialized(SignalMessage(type = "error", code = "invalid_json", message = "Could not parse message"))
