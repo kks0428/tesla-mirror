@@ -9,8 +9,9 @@
 
 ## Next engineering steps
 1. MediaProjection permission flow moved to Activity Result API
-2. Introduce a real embedded HTTP/WebSocket server lifecycle tied to foreground service
-3. Add real WebRTC library integration on Android
+2. Basic foreground service lifecycle wiring added
+3. Introduce a real embedded HTTP/WebSocket server lifecycle tied fully to foreground service
+4. Add real WebRTC library integration on Android
 4. Connect signaling messages to the WebRTC sender
 5. Generate and forward SDP offer
 6. Accept browser answer and ICE candidates

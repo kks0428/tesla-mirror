@@ -1,5 +1,6 @@
 package ai.teslamirror.app.session
 
+import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjection
 import ai.teslamirror.app.capture.MediaProjectionController
@@ -7,11 +8,14 @@ import ai.teslamirror.app.local.LocalServerSkeleton
 import ai.teslamirror.app.model.MirrorUiState
 import ai.teslamirror.app.net.LocalIpResolver
 import ai.teslamirror.app.rtc.WebRtcSenderSkeleton
+import ai.teslamirror.app.service.MirrorServiceController
+import ai.teslamirror.app.service.MirrorServiceState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class MirrorSessionCoordinator(
+    private val context: Context,
     private val server: LocalServerSkeleton,
     private val rtc: WebRtcSenderSkeleton,
     private val projectionController: MediaProjectionController,
@@ -21,13 +25,14 @@ class MirrorSessionCoordinator(
     private var mediaProjection: MediaProjection? = null
 
     fun startLocalSession() {
+        MirrorServiceController.start(context)
         server.start()
         val session = server.createSession()
         val ip = LocalIpResolver.guessHotspotIp()
         val url = "http://$ip:${server.port}/?sessionId=${session.sessionId}&token=${session.token}"
         rtc.startSession(session.sessionId)
         _uiState.value = _uiState.value.copy(
-            status = "local session started",
+            status = MirrorServiceState.status.value,
             localIp = ip,
             url = url,
             sessionId = session.sessionId,
@@ -40,6 +45,7 @@ class MirrorSessionCoordinator(
     fun stopLocalSession() {
         rtc.stopSession()
         server.stop()
+        MirrorServiceController.stop(context)
         _uiState.value = _uiState.value.copy(
             status = "local session stopped",
             serverRunning = false,

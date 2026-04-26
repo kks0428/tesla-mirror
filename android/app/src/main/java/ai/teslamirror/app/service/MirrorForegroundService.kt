@@ -15,10 +15,30 @@ class MirrorForegroundService : Service() {
         super.onCreate()
         createChannel()
         startForeground(1, buildNotification("Tesla Mirror is idle"))
+        MirrorServiceState.update("service_created")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            MirrorServiceController.ACTION_START -> {
+                MirrorServiceState.update("service_started")
+                refreshNotification("Local mirror session starting")
+            }
+            MirrorServiceController.ACTION_STOP -> {
+                MirrorServiceState.update("service_stopping")
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+            else -> {
+                MirrorServiceState.update("service_running")
+            }
+        }
         return START_STICKY
+    }
+
+    override fun onDestroy() {
+        MirrorServiceState.update("service_destroyed")
+        super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -30,6 +50,11 @@ class MirrorForegroundService : Service() {
                 NotificationChannel("mirror", "Tesla Mirror", NotificationManager.IMPORTANCE_LOW)
             )
         }
+    }
+
+    private fun refreshNotification(text: String) {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(1, buildNotification(text))
     }
 
     private fun buildNotification(text: String): Notification {

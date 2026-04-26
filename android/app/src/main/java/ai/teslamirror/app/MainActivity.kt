@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
         val mediaProjectionController = MediaProjectionController(
             getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         )
-        val coordinator = MirrorSessionCoordinator(server, rtc, mediaProjectionController)
+        val coordinator = MirrorSessionCoordinator(this, server, rtc, mediaProjectionController)
 
         val projectionLauncher = registerForActivityResult(StartActivityForResult()) { result ->
             coordinator.onProjectionPermissionResult(result.resultCode, result.data)
